@@ -1,0 +1,13 @@
+name: HardGamezEngine
+version: '1.0'
+main: pl._lakidev.hardGamezEngine.HardGamezEngine
+api-version: '1.20'
+authors: [ "_LakiDev", "Szefuńo" ]
+description: Framework for HardGamez plugins
+website: https://grubyplay.pl
+
+
+commands:
+  lang:
+    description: Command to change language
+    aliases: language

@@ -39,6 +39,7 @@ A Paper plugin framework for building Minecraft plugins. Provides ready-made eng
 | [TimeEngine](#timeengine) | `new TimeEngine(plugin)` | Delayed / repeating tasks |
 | [WebEngine](#webengine) | `WebEngine.createEndpoint(...)` | HTTP API server (Paper ↔ Velocity) |
 | [WebhookEngine](#webhookengine) | `WebhookEngine.sendWebhook(...)` | Discord webhook sender |
+| [NpcEngine](#npcengine) | `NpcEngine.register(...)` | Fake-player and mob NPCs with pathfinding |
 
 ---
 
@@ -576,3 +577,135 @@ database:          # only for MONGODB
   password: ""
   database: hardgamez
 ```
+
+---
+
+## NpcEngine
+
+Creates and manages server-side NPCs. Human NPCs (`NpcType.HUMAN`) are implemented as fake `ServerPlayer` entities sent via NMS packets — they look exactly like players and support custom skins. Mob NPCs use Bukkit's entity API with AI disabled.
+
+```java
+NpcObject npc = NpcEngine.register(NpcType.HUMAN, "Steve", location)
+    .setSkinName("Notch")
+    .setLooking(true)
+    .clickEvent(e -> {
+        if (e.isRightClick()) e.getPlayer().sendMessage("Right clicked!");
+        if (e.isLeftClick())  e.getPlayer().sendMessage("Left clicked!");
+    })
+    .hideNickname(false)
+    .invicible(true)
+    .setScale(1.0f)
+    .setGlowing(false)
+    .setWaypoints(new Location[]{ loc1, loc2, loc3 })
+    .loopType(LoopType.SHERIFF)
+    .spawn();
+```
+
+### NpcEngine methods
+
+```java
+NpcObject npc = NpcEngine.register(NpcType.HUMAN, "name");                     // no location (set later)
+NpcObject npc = NpcEngine.register(NpcType.HUMAN, "name", location);           // with spawn location
+NpcObject npc = NpcEngine.get(uuid);                                            // get by NPC uuid
+Collection<NpcObject> all = NpcEngine.getAll();                                 // get all registered NPCs
+boolean removed = NpcEngine.remove(uuid);                                       // remove by uuid
+NpcEngine.removeAll();                                                           // remove all (auto on disable)
+```
+
+### NpcObject — configuration (before and after spawn)
+
+```java
+npc.setSkinURL("https://textures.minecraft.net/texture/...");  // skin from texture URL
+npc.setSkinName("Notch");                                       // skin fetched by player name (async)
+npc.setSkinUUID(uuid);                                          // skin fetched by player UUID (async)
+npc.setLooking(true);                                           // track and look at nearest player
+npc.hideNickname(true);                                         // hide the name tag
+npc.setInventory(inventory);                                    // equip items (slots: 0=main, 1=off, 2-5=armor)
+npc.invicible(true);                                            // make invulnerable (default: true)
+npc.setWaypoints(new Location[]{ ... });                        // set movement waypoints
+npc.loopType(LoopType.FIRST_POINT);                             // set waypoint loop type
+npc.setScale(1.5f);                                             // resize the NPC (1.21+ servers only)
+npc.setGlowing(true);                                           // enable glow outline
+npc.setGlowColor(ChatColor.AQUA);                               // set glow color
+npc.setSilent(true);                                            // suppress sounds
+npc.setGravity(false);                                          // disable gravity
+npc.setCollidable(false);                                       // disable player collision
+npc.setSneaking(true);                                          // put NPC in crouching pose (HUMAN only)
+npc.setName("NewName");                                         // change display name
+npc.setLocation(location);                                      // teleport NPC
+```
+
+### NpcObject — actions
+
+```java
+npc.clearWaypoints();    // stop movement, teleport back to spawn
+npc.remove();            // despawn and unregister NPC
+```
+
+### NpcType
+
+| Type | Description |
+|---|---|
+| `HUMAN` | Fake player entity — supports custom skins, player model |
+| `ZOMBIE` | Zombie mob |
+| `SKELETON` | Skeleton mob |
+| `CREEPER` | Creeper mob |
+| `SPIDER` / `CAVE_SPIDER` | Spider variants |
+| `ENDERMAN` | Enderman |
+| `BLAZE` | Blaze |
+| `WITCH` | Witch |
+| `WITHER_SKELETON` | Wither Skeleton |
+| `PILLAGER` / `VINDICATOR` / `EVOKER` | Illager variants |
+| `PHANTOM` | Phantom |
+| `DROWNED` / `HUSK` / `STRAY` | Zombie/Skeleton variants |
+| `ZOMBIE_VILLAGER` | Zombie Villager |
+| `PIGLIN` / `PIGLIN_BRUTE` / `ZOMBIFIED_PIGLIN` | Piglin variants |
+| `HOGLIN` / `ZOGLIN` | Hoglin variants |
+| `GUARDIAN` / `ELDER_GUARDIAN` | Guardians |
+| `SHULKER` | Shulker |
+| `SILVERFISH` / `ENDERMITE` | Small arthropods |
+| `VEX` | Vex |
+| `RAVAGER` | Ravager |
+| `WARDEN` | Warden |
+
+### LoopType
+
+| Type | Pattern (3 waypoints) | Description |
+|---|---|---|
+| `FIRST_POINT` | `1 → 2 → 3 → 1 → 2 → 3` | After last, jump to first and repeat |
+| `SHERIFF` | `1 → 2 → 3 → 2 → 1 → 2 → 3` | Ping-pong back and forth |
+| `NONE` | `1 → 2 → 3` | Walk once, stop at last waypoint |
+
+### NpcClickEvent
+
+```java
+npc.clickEvent(e -> {
+    Player player     = e.getPlayer();
+    NpcObject npc     = e.getNpc();
+    ClickType type    = e.getClickType();   // LEFT or RIGHT
+    boolean isLeft    = e.isLeftClick();
+    boolean isRight   = e.isRightClick();
+});
+```
+
+### Getters
+
+```java
+UUID id          = npc.getId();
+NpcType type     = npc.getNpcType();
+String name      = npc.getName();
+Location loc     = npc.getLocation();
+Entity entity    = npc.getEntity();
+boolean spawned  = npc.isSpawned();
+boolean looking  = npc.isLooking();
+boolean invincible = npc.isInvincible();
+LoopType loop    = npc.getLoopType();
+NpcSkin skin     = npc.getSkin();
+```
+
+### Notes
+
+- Human NPCs are sent purely via packets — they do not exist in the server's entity list. This means they appear to clients but will not trigger normal entity events.
+- Click detection for HUMAN NPCs uses `EntityDamageByEntityEvent` (left click) and `PlayerInteractAtEntityEvent` (right click) on the fake player entity.
+- Skin fetching (`setSkinName`, `setSkinUUID`, `setSkinURL`) is done asynchronously. If called before `.spawn()`, the skin is applied at spawn time. If called after, the NPC is respawned with the new skin.
+- Human NPC names are truncated to 16 characters (Minecraft limit for player names in `GameProfile`).

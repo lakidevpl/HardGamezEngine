@@ -13,6 +13,7 @@ import pl._lakidev.hardGamezEngine.lang.defaults.Polski;
 import pl._lakidev.hardGamezEngine.player.PlayerEngine;
 import pl._lakidev.hardGamezEngine.player.PlayerRegister;
 import pl._lakidev.hardGamezEngine.hologram.HologramEngine;
+import pl._lakidev.hardGamezEngine.npc.NpcEngine;
 import pl._lakidev.hardGamezEngine.scoreboard.ScoreboardEngine;
 import pl._lakidev.hardGamezEngine.tablist.TablistEngine;
 import pl._lakidev.hardGamezEngine.web.WebEngine;
@@ -86,6 +87,7 @@ public final class HardGamezEngine extends JavaPlugin {
         console.sendMessage("§d  [INFO] §fInitializing gui engine...");
         HologramEngine.init(this);
         TablistEngine.init(this);
+        NpcEngine.init(this);
         console.sendMessage("§d  [DONE] §fGui engine initialized");
 
         // --- Web ---
@@ -115,6 +117,7 @@ public final class HardGamezEngine extends JavaPlugin {
         HologramEngine.removeAll();
         ScoreboardEngine.removeAll();
         TablistEngine.removeAll();
+        NpcEngine.removeAll();
         PlayerEngine.shutdown();
         if (WebEngine.getInstance() != null) WebEngine.getInstance().shutdown();
         console.sendMessage("§d  [DONE] §7Plugin disabled successfully");

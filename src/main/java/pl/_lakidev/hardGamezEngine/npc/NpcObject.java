@@ -343,6 +343,7 @@ public class NpcObject {
         stopLookTask();
         lookTask = Bukkit.getScheduler().runTaskTimer(HardGamezEngine.getInstance(), () -> {
             if (spawnedEntity == null || spawnedEntity.isDead()) return;
+            if (movementTask != null) return;
             Player nearest = nearestPlayer();
             if (nearest == null) return;
             lookAt(nearest.getEyeLocation());
